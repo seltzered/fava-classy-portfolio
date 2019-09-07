@@ -1,4 +1,4 @@
-#Fava Classy Portfolio Extension
+# Fava Classy Portfolio Extension
 
 ## PROTOTYPE: modification to fava required.
 This is an early prototype I'm throwing out there due to interest from the Beancount Community (see https://groups.google.com/forum/#!msg/beancount/XNjjnML_vsA/e_MAEhgCBgAJ ). The jinja template currently uses a for loop and recursion, which requires adding loopcontrols to Fava. This can be done via adding the line `app.jinja_options["extensions"].append("jinja2.ext.loopcontrols")` to Fava's application.py. 
