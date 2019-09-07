@@ -1,0 +1,126 @@
+{% set sort_type = {
+    "<class 'decimal.Decimal'>": 'num',
+    "<class 'cdecimal.Decimal'>": 'num',
+    "<class 'int'>": 'num',
+} %}
+
+{% macro ptcell(name, value, type_, rowspan=1) %}
+{% set type = type_|string %}
+{% if type == "<class 'beancount.core.inventory.Inventory'>" %}
+<td class="num" rowspan="{{rowspan}}">
+  {% for position in value|sort(attribute='units.currency') %}
+  {{ position.units|format_amount }}<br>
+  {% endfor %}
+</td>
+{% elif type == "<class 'str'>" %}
+<td rowspan="{{rowspan}}">
+  {%  if name == "account" %}
+  <a href="{{ url_for('account', name=value) }}">{{ value }}</a>
+  {% else %}
+  {{ value }}
+  {% endif %}
+</td>
+{% elif type == "<class 'decimal.Decimal'>" or type == "<class 'cdecimal.Decimal'>" %}
+<td class="num" data-sort-value="{{ value or 0 }}" rowspan="{{rowspan}}">{{ value|format_currency }}</td>
+{% elif type == "<class 'beancount.core.amount.Amount'>" %}
+<td class="num" data-sort-value="{{ value.number or 0 }}" rowspan="{{rowspan}}">{{ value|format_amount }}</td>
+{% elif type == "<class 'bool'>" %}
+<td rowspan="{{rowspan}}">{{ value|upper }}</td>
+{% elif type == "<class 'int'>" %}
+<td class="num" rowspan="{{rowspan}}">{{ value }}</td>
+{% elif type == "<class 'set'>" %}
+<td rowspan="{{rowspan}}">{{ value|join(',') }}</td>
+{% elif type == "<class 'datetime.date'>" %}
+<td rowspan="{{rowspan}}">{{ value or '' }}</td>
+{% elif type == "<class 'beancount.core.position.Position'>" %}
+<td class="num" rowspan="{{rowspan}}">{{ value.units|format_amount }}</td>
+{% else %}
+<td class="query-error" title="Type {{ type|string }} not recognized" rowspan="{{rowspan}}">{{ value }}</td>
+{% endif %}
+{% endmacro %}
+
+{# {% macro portfoliotable_iter(types, data, isStart, filter_empty=None) %}
+
+    {% set rowcount = 0 %}
+    {% set colcount = 0 %}
+
+    {% if isStart == True %}
+      <tr>
+    {% endif %}
+
+    {% for colname, coltype in types %}      
+        {% if coltype == "<class 'dict'>" %} 
+          {{ portfoliotable_iter( types[colcount:], data[colname], False ) }}
+        {% else %}
+          {{ ptcell(colname, data[colname][0], coltype, data[colname][1]["rowspan"])}}
+        {% endif %}
+
+      {% else %} 
+        { assume already in a row, have keys }
+        {% for key, value in data[colname].items() %}
+          {% if rowcount != 0 %}
+            <tr>
+          {% endif %}
+
+          { print td cell key - TODO: deal with account keys for url links }
+          {{ ptcell("key", key, "<class 'str'>", value[1]["rowspan"])}}
+          {% set data_inner = value[0] %}
+          {% for colname, coltype in types %}
+            {% if coltype == "<class 'dict'>" %}
+              {{ portfoliotable_iter( types[colcount:], data_inner[colname], False ) }}
+            {% else %}
+              {{ ptcell(colname, data_inner[colname][0], coltype, data_inner[colname][1]["rowspan"]) }}
+            {% endif %}
+          {% endfor %}
+          </tr>
+
+          {% set rowcount = rowcount + 1 %}
+        {% endfor %}
+
+      {% set colcount = colcount + 1 %}
+      {% endif %}
+
+    {% endfor %}
+    </tr>
+{% endmacro %}
+ #}
+
+{# portfoliotable takes in a tree-like breakdown of data
+
+  types - array of tuples of key name and type. 
+          ordering dictates column order.
+          A type of dict signals that data in subsequent columns
+          will be kept within the dictionary's value.
+
+  data -  dictionary of data with key names and values
+          with rowspan information.
+#}
+{% macro portfoliotable(types, data, filter_empty=None) %}
+{% if types %}
+<table>
+  <thead>
+    <tr>
+      {% for name, type in types %}
+      <th data-sort="{{ sort_type[type|string] or "string" }}">{{ name }}</th>
+      {% endfor %}
+    </tr>
+  </thead>
+  <tbody>
+    {# {{% portfoliotable_iter(types, data, True) %}} #}
+
+  </tbody>
+</table>
+{% endif %}
+{% endmacro %}
+
+{# {% macro download_links(query) -%}
+  <span class="download">
+    ({{ _('Download as') }}
+    <a href="{{ url_for('download_query', query_string=query, result_format='csv') }}" data-remote>CSV</a>{% if config['HAVE_EXCEL'] %},
+      <a href="{{ url_for('download_query', query_string=query, result_format='xls') }}" data-remote>XLS</a>,
+      <a href="{{ url_for('download_query', query_string=query, result_format='xlsx') }}" data-remote>XLSX</a>, or
+      <a href="{{ url_for('download_query', query_string=query, result_format='ods') }}" data-remote>ODS</a>
+    {% endif %})
+  </span>
+{%- endmacro %}
+ #}
