@@ -105,7 +105,9 @@
   <thead>
     <tr>
       {% for name, type in types %}
-      <th data-sort="{{ sort_type[type|string] or "string" }}">{{ name|replace("_","\n") }}</th>
+      {% autoescape false %}
+      <th data-sort="{{ sort_type[type|string] or "string" }}">{{ name|replace("_","<br/>") }}</th>
+      {% end autoescape %}
       {% endfor %}
     </tr>
   </thead>
