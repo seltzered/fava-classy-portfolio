@@ -287,7 +287,7 @@ class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
                     "asset_subclasses"][asset_subclass][
                     "asset_subclass_total"] += account_balance_market_value
 
-            elif len(account_balance_market_value) == 0:
+            elif len(account_cost_node) == 0:
                 # Assume account is empty
                 account_data["balance_market_value"] = ZERO
                 account_data["income_gain_loss"] = ZERO
