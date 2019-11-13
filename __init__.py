@@ -3,14 +3,20 @@
 """
 import os
 import re
+import datetime
 
 from beancount.core.data import iter_entry_dates, Open, Commodity
-from beancount.core.number import ZERO, Decimal
+from beancount.core.number import ZERO, D, Decimal
+from beancount.core import prices
+from beancount.core import convert
+
+from flask import g
 
 from fava.ext import FavaExtensionBase
 from fava.template_filters import cost_or_value
 from fava.core.tree import Tree
 from fava.core.helpers import FavaAPIException
+from fava.template_filters import get_market_value
 from fava.application import app
 
 
@@ -115,6 +121,47 @@ class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
         portfolio_data = self._portfolio_data(selected_nodes, date)
         return title, portfolio_data
 
+    def _asset_info(self, node):
+        """
+        Additional info on an asset (price, gain/loss)
+        """
+        account_cost = (node.balance.reduce(convert.get_cost))[
+            self.operating_currency]
+        account_balance_market_value_node = node.balance.reduce(
+            get_market_value,
+            g.ledger.price_map,
+            datetime.date.today())
+        account_balance_market_value = account_balance_market_value_node[
+            self.operating_currency]
+
+        # Calculate unrealized gain/loss
+        # (follow beancount convention that negative values are income)
+        account_income_gain_loss_unrealized = \
+            account_cost - account_balance_market_value
+
+        # Calculate unrealized gain/loss (percentage)
+        account_gain_loss_unrealized_percentage = (
+            (account_income_gain_loss_unrealized * D(-1.0)) /
+            account_cost) * D(100.0)
+
+        return account_balance_market_value, \
+            account_income_gain_loss_unrealized, \
+            account_gain_loss_unrealized_percentage
+
+    def _account_latest_price(self, node):
+        # Get latest price date
+        quote_price = list(node.balance.keys())[0]
+        if(quote_price[1] is None):
+            latest_price = None
+        else:
+            base = quote_price[0]
+            currency = quote_price[1][1]
+            latest_price = prices.get_latest_price(
+                g.ledger.price_map,
+                (currency, base)
+            )
+        return latest_price
+
     def _portfolio_data(self, nodes, date):
         """
         Turn a portfolio of tree nodes into portfolio_table-style data,
@@ -128,7 +175,7 @@ class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
             rows: Dictionaries of row data by column names.
         """
         errors = []
-        operating_currency = self.ledger.options["operating_currency"][0]
+        self.operating_currency = self.ledger.options["operating_currency"][0]
 
         types = [
             ("portfolio_total", str(Decimal)),
@@ -143,7 +190,10 @@ class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
             # ("portfolio_allocation", str(Decimal)),
             # ("class_allocation", str(Decimal)),
             ("asset_subclass_allocation", str(Decimal)),
-            ("balance", str(Decimal))
+            ("balance_market_value", str(Decimal)),
+            ("income_gain_loss", str(Decimal)),
+            ("gain_loss_percentage", str(Decimal)),
+            ("latest_price_date", str(datetime))
         ]
 
         portfolio_tree = {}
@@ -195,31 +245,61 @@ class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
             # Insert account-level balances and
             # Sum totals for later calculating allocation
             account_data = {}
-            balance = cost_or_value(node.balance, date)
-            if operating_currency in balance:
-                balance_dec = balance[operating_currency]
-                account_data["balance"] = balance_dec
+            # Get balance market value at today's date, if possible.
+
+            # Calculate cost
+            account_cost_node = (node.balance.reduce(convert.get_cost))
+
+            if self.operating_currency in account_cost_node:
+
+                account_cost = account_cost_node[self.operating_currency]
+                latest_price = self._account_latest_price(node)
+                if (latest_price is None or latest_price[0] is None):
+                    latest_price_date = None
+                    account_balance_market_value = account_cost
+                    # assume there's no gain loss
+                    account_data["balance_market_value"] = account_cost
+                    account_data["income_gain_loss"] = None
+                    account_data["gain_loss_percentage"] = None
+                    account_data["latest_price_date"] = None
+                else:
+                    latest_price_date = latest_price[0]
+                    account_balance_market_value, \
+                        account_income_gain_loss_unrealized, \
+                        account_gain_loss_unrealized_percentage = \
+                        self._asset_info(node)
+
+                    account_data["balance_market_value"] = account_balance_market_value
+                    account_data["income_gain_loss"] = account_income_gain_loss_unrealized
+                    account_data["gain_loss_percentage"] = account_gain_loss_unrealized_percentage
+                    account_data["latest_price_date"] = latest_price_date
+
                 portfolio_tree["asset_classes"][asset_class][
                     "asset_subclasses"][asset_subclass][
                     "accounts"][node.name] = account_data
 
-                portfolio_tree["portfolio_total"] += balance_dec
+                # Accumulate sums
+                portfolio_tree[
+                    "portfolio_total"] += account_balance_market_value
                 portfolio_tree["asset_classes"][asset_class][
-                    "asset_class_total"] += balance_dec
+                    "asset_class_total"] += account_balance_market_value
                 portfolio_tree["asset_classes"][asset_class][
                     "asset_subclasses"][asset_subclass][
-                    "asset_subclass_total"] += balance_dec
+                    "asset_subclass_total"] += account_balance_market_value
 
-            elif len(balance) == 0:
+            elif len(account_balance_market_value) == 0:
                 # Assume account is empty
-                account_data["balance"] = ZERO
+                account_data["balance_market_value"] = ZERO
+                account_data["income_gain_loss"] = ZERO
+                account_data["gain_loss_percentage"] = ZERO
+                account_data["latest_price_date"] = None
                 portfolio_tree["asset_classes"][asset_class][
                     "asset_subclasses"][asset_subclass][
                     "accounts"][node.name] = account_data
             else:
                 errors.append("account " + node.name +
                               " has balances not in operating currency " +
-                              operating_currency)
+                              self.operating_currency)
 
         # Now that account balances and totals are calculated,
         # Traverse and calculate portfolio-level info.
@@ -249,17 +329,17 @@ class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
                     account_dict = asset_subclass_dict["accounts"][account]
 
                     account_dict["portfolio_allocation"] = ZERO if portfolio_tree["portfolio_total"] == ZERO else round(
-                        (account_dict["balance"] /
+                        (account_dict["balance_market_value"] /
                             portfolio_tree["portfolio_total"]) * 100, 2
                     )
 
                     account_dict["asset_class_allocation"] = ZERO if asset_class_dict["asset_class_total"] == ZERO else round(
-                        (account_dict["balance"] /
+                        (account_dict["balance_market_value"] /
                             asset_class_dict["asset_class_total"]) * 100, 2
                     )
 
                     account_dict["asset_subclass_allocation"] = ZERO if asset_subclass_dict["asset_subclass_total"] == ZERO else round(
-                        (account_dict["balance"] /
+                        (account_dict["balance_market_value"] /
                             asset_subclass_dict["asset_subclass_total"]) * 100, 2
                     )
 
