@@ -1,3 +1,17 @@
+<style>
+td[data-is-percentage] {
+  font-weight: bold;
+}
+
+td[data-is-gain=True] {
+  color: green;
+}
+
+td[data-is-gain=False] {
+  color: red;
+}
+</style>
+
 {% set sort_type = {
     "<class 'decimal.Decimal'>": 'num',
     "<class 'cdecimal.Decimal'>": 'num',
@@ -24,6 +38,20 @@
 <td class="num" data-sort-value="{{ value or 0 }}" rowspan="{{rowspan}}">{{ value|format_currency }}</td>
 {% elif type == "<class 'beancount.core.amount.Amount'>" %}
 <td class="num" data-sort-value="{{ value.number or 0 }}" rowspan="{{rowspan}}">{{ value|format_amount }}</td>
+{% elif type == "<class 'fava_classy_portfolio.DecimalPercent'>" %}
+  <td class="num" data-is-percentage data-sort-value="{{ value or 0 }}" rowspan="{{rowspan}}">
+  {% if value %}
+  {{ ((value|format_currency) + '%')}}
+  {% endif %}
+  </td>
+{% elif type == "<class 'fava_classy_portfolio.DecimalIncomeGainLoss'>" %}
+<td class="num" data-is-gain="{{ (value or 0) <= 0.0 }}" data-sort-value="{{ value or 0 }}" rowspan="{{rowspan}}">{{ value|format_currency }}</td>
+{% elif type == "<class 'fava_classy_portfolio.DecimalPercentGainLoss'>" %}
+  <td class="num" data-is-percentage data-is-gain="{{ (value or 0) > 0.0 }}" data-sort-value="{{ value or 0 }}" rowspan="{{rowspan}}">
+  {% if value %}
+  {{ ((value|format_currency) + '%')}}
+  {% endif %}
+  </td>
 {% elif type == "<class 'bool'>" %}
 <td rowspan="{{rowspan}}">{{ value|upper }}</td>
 {% elif type == "<class 'int'>" %}
