@@ -20,6 +20,18 @@ from fava.template_filters import get_market_value
 from fava.application import app
 
 
+class DecimalPercent(Decimal):
+    pass
+
+
+class DecimalIncomeGainLoss(Decimal):
+    pass
+
+
+class DecimalPercentGainLoss(Decimal):
+    pass
+
+
 class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
     """Fava Extension Report that prints out a portfolio list based
        on asset-class and asset-subclass metadata.
@@ -29,7 +41,7 @@ class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
 
     def load_report(self):
         # self.account_open_dict = {entry.account: entry for entry in
-                                  # self.ledger.all_entries_by_type[Open]}
+        # self.ledger.all_entries_by_type[Open]}
         self.commodity_dict = {entry.currency: entry for entry in
                                self.ledger.all_entries_by_type[Commodity]}
 
@@ -180,20 +192,20 @@ class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
         types = [
             ("portfolio_total", str(Decimal)),
             ("asset_classes", str(dict)),
-            ("portfolio_allocation", str(Decimal)),
+            ("portfolio_allocation", str(DecimalPercent)),
             ("asset_class_total", str(Decimal)),
             ("asset_subclasses", str(dict)),
             # ("portfolio_allocation", str(Decimal)),
-            ("asset_class_allocation", str(Decimal)),
+            ("asset_class_allocation", str(DecimalPercent)),
             ("asset_subclass_total", str(Decimal)),
             ("accounts", str(dict)),
             # ("portfolio_allocation", str(Decimal)),
             # ("class_allocation", str(Decimal)),
-            ("asset_subclass_allocation", str(Decimal)),
+            ("asset_subclass_allocation", str(DecimalPercent)),
             ("balance_market_value", str(Decimal)),
-            ("income_gain_loss", str(Decimal)),
-            ("gain_loss_percentage", str(Decimal)),
-            ("latest_price_date", str(datetime))
+            ("income_gain_loss", str(DecimalIncomeGainLoss)),
+            ("gain_loss_percentage", str(DecimalPercentGainLoss)),
+            ("latest_price_date", str(datetime.date))
         ]
 
         portfolio_tree = {}
