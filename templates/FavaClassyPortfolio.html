@@ -27,13 +27,7 @@ td[data-is-gain=False] {
   {% endfor %}
 </td>
 {% elif type == "<class 'str'>" %}
-<td rowspan="{{rowspan}}">
-  {%  if name == "account" %}
-  <a href="{{ url_for('account', name=value) }}">{{ value }}</a>
-  {% else %}
-  {{ value }}
-  {% endif %}
-</td>
+<td data-string rowspan="{{rowspan}}">{{ value }}</td>
 {% elif type == "<class 'decimal.Decimal'>" or type == "<class 'cdecimal.Decimal'>" %}
 <td class="num" data-sort-value="{{ value or 0 }}" rowspan="{{rowspan}}">{{ value|format_currency }}</td>
 {% elif type == "<class 'beancount.core.amount.Amount'>" %}
@@ -74,14 +68,12 @@ td[data-is-gain=False] {
       {% for colname, coltype in types %}
         {% set colcount = loop %}
         {% if coltype == "<class 'dict'>" %}
-          {# {{colcount.index0|pprint}}
-          <br />
-          {{data[colname]|pprint}} #}
           {# recurse, provide dict with types after dict #}
           {{ portfoliotable_iter( types[(colcount.index0 + 1):], data[colname], False ) }}
           {% break %}
         {% else %}
-          {{ ptcell(colname, data[colname][0], coltype, data[colname][1]["rowspan"])}}
+          {# Just print the cell, generally don't expect this case #}
+          {{ ptcell(colname, data[colname][0], coltype, data[colname][1]["rowspan"]) }}
         {% endif %}
       {% endfor %}
      </tr>
