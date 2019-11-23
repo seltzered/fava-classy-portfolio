@@ -10,6 +10,14 @@ td[data-is-gain=True] {
 td[data-is-gain=False] {
   color: red;
 }
+
+h3[data-portfolio-title] {
+  display: inline-block
+}
+
+span[data-portfolio-subtitle] {
+  color: grey
+}
 </style>
 
 {% set sort_type = {
@@ -126,7 +134,7 @@ td[data-is-gain=False] {
     <tr>
       {% for name, type in types %}
       {% autoescape false %}
-      <th data-sort="{{ sort_type[type|string] or "string" }}">{{ name|replace("_","<br/>") }}</th>
+      <th data-string data-sort="{{ sort_type[type|string] or "string" }}">{{ name|replace("_","<br/>") }}</th>
       {% endautoescape %}
       {% endfor %}
     </tr>
@@ -151,8 +159,9 @@ td[data-is-gain=False] {
 <h2>Classy Portfolio</h2>
 <br />
 {% for portfolio in extension.portfolio_accounts(None, None) %}
-    <h3>{{portfolio[0]}}</h3>
-    {{ portfoliotable(*portfolio[1]) }}
+    <h3 data-portfolio-title>{{portfolio[0]}}</h3>
+    <span data-portfolio-subtitle>{{portfolio[1]}}</span>
+    {{ portfoliotable(*portfolio[2]) }}
     <br />
 {% endfor %}
 

@@ -67,12 +67,13 @@ class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
             else:
                 raise FavaAPIException("Classy Portfolio: Invalid option.")
 
-            portfolio = (portfolio[0],
+            portfolio = (portfolio[0],  # title
+                         portfolio[1],  # subtitle
                          (insert_rowspans(
-                             portfolio[1][0],
-                             portfolio[1][1],
+                             portfolio[2][0],
+                             portfolio[2][1],
                              True),
-                          portfolio[1][1])
+                          portfolio[2][1])  # portfolio data
                          )
             portfolios.append(portfolio)
 
@@ -89,7 +90,8 @@ class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
         Return:
             Data structured for use with a querytable (types, rows).
         """
-        title = "Account names matching: '" + pattern + "'"
+        title = pattern.capitalize()
+        subtitle = "Account names matching: '" + pattern + "'"
         selected_accounts = []
         regexer = re.compile(pattern)
         for acct in tree.keys():
@@ -100,7 +102,7 @@ class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
 
         selected_nodes = [tree[x] for x in selected_accounts]
         portfolio_data = self._portfolio_data(selected_nodes, date)
-        return title, portfolio_data
+        return (title, subtitle, portfolio_data)
 
     def _account_metadata_pattern(self, tree, date, metadata_key, pattern):
         """
@@ -114,7 +116,8 @@ class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
         Return:
             Data structured for use with a querytable - (types, rows).
         """
-        title = (
+        title = pattern.capitalize()
+        subtitle = (
             "Accounts with '"
             + metadata_key
             + "' metadata matching: '"
@@ -131,7 +134,7 @@ class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
 
         selected_nodes = [tree[x] for x in selected_accounts]
         portfolio_data = self._portfolio_data(selected_nodes, date)
-        return title, portfolio_data
+        return (title, subtitle, portfolio_data)
 
     def _asset_info(self, node):
         """
