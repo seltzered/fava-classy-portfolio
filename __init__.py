@@ -215,6 +215,7 @@ class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
         portfolio_tree["portfolio_total"] = ZERO
         portfolio_tree["asset_classes"] = {}
         for node in nodes:
+            account_name = node.name
             commodity = node_commodity(node)
             if (commodity in self.commodity_dict) and (
                "asset-class" in self.commodity_dict[commodity].meta
@@ -291,7 +292,7 @@ class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
 
                 portfolio_tree["asset_classes"][asset_class][
                     "asset_subclasses"][asset_subclass][
-                    "accounts"][node.name] = account_data
+                    "accounts"][account_name] = account_data
 
                 # Accumulate sums
                 portfolio_tree[
@@ -310,9 +311,9 @@ class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
                 account_data["latest_price_date"] = None
                 portfolio_tree["asset_classes"][asset_class][
                     "asset_subclasses"][asset_subclass][
-                    "accounts"][node.name] = account_data
+                    "accounts"][account_name] = account_data
             else:
-                errors.append("account " + node.name +
+                errors.append("account " + account_name +
                               " has balances not in operating currency " +
                               self.operating_currency)
 
