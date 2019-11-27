@@ -93,7 +93,7 @@ span[data-portfolio-subtitle] {
 {% elif type == "account_name" %}
 {# NOTE: rowspan expected to be 1 for account names
          for proper layout #}
-<td data-account-string rowspan="{{rowspan}}">{{ value }}</td>
+<td data-account-string rowspan="{{rowspan}}"><a href="{{ url_for('account', name=value, time=time_filter) }}">{{ value }}</a></td>
 {% elif type == "<class 'decimal.Decimal'>" or type == "<class 'cdecimal.Decimal'>" %}
 <td class="num" data-sort-value="{{ value or 0 }}" rowspan="{{rowspan}}">{{ value|format_currency }}</td>
 {% elif type == "<class 'beancount.core.amount.Amount'>" %}
