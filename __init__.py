@@ -20,6 +20,10 @@ from fava.template_filters import get_market_value
 from fava.application import app
 
 
+class AccountsDict(dict):
+    pass
+
+
 class DecimalPercent(Decimal):
     pass
 
@@ -201,7 +205,7 @@ class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
             # ("portfolio_allocation", str(Decimal)),
             ("asset_class_allocation", str(DecimalPercent)),
             ("asset_subclass_total", str(Decimal)),
-            ("accounts", str(dict)),
+            ("accounts", str(AccountsDict)),
             # ("portfolio_allocation", str(Decimal)),
             # ("class_allocation", str(Decimal)),
             ("asset_subclass_allocation", str(DecimalPercent)),
@@ -418,7 +422,8 @@ def insert_rowspans(data, coltypes, isStart):
             new_data[key] = (data[key], {"rowspan": 1})
 
         for coltype in coltypes:
-            if(coltype[1] == "<class 'dict'>"):
+            if((coltype[1] == "<class 'dict'>") or
+               (coltype[1] == "<class 'fava_classy_portfolio.AccountsDict'>")):
                 # Return length of each key.
                 for key in data.keys():
                     new_data_inner = insert_rowspans(data[key][coltype[0]],

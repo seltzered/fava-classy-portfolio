@@ -11,6 +11,13 @@ td[data-is-gain=False] {
   color: red;
 }
 
+td[data-account-string] {
+  max-width: 159px;
+  word-wrap: break-word;
+  overflow-x: scroll;
+  display: block;
+}
+
 h3[data-portfolio-title] {
   display: inline-block
 }
@@ -36,6 +43,10 @@ span[data-portfolio-subtitle] {
 </td>
 {% elif type == "<class 'str'>" %}
 <td data-string rowspan="{{rowspan}}">{{ value }}</td>
+{% elif type == "account_name" %}
+{# NOTE: rowspan expected to be 1 for account names
+         for proper layout #}
+<td data-account-string rowspan="{{rowspan}}">{{ value }}</td>
 {% elif type == "<class 'decimal.Decimal'>" or type == "<class 'cdecimal.Decimal'>" %}
 <td class="num" data-sort-value="{{ value or 0 }}" rowspan="{{rowspan}}">{{ value|format_currency }}</td>
 {% elif type == "<class 'beancount.core.amount.Amount'>" %}
@@ -69,7 +80,7 @@ span[data-portfolio-subtitle] {
 {% endif %}
 {% endmacro %}
 
-{% macro portfoliotable_iter(types, data, isStart, filter_empty=None) %}
+{% macro portfoliotable_iter(types, data, isStart, dictType, filter_empty=None) %}
 
     {% if isStart == True %}
       <tr>
@@ -77,7 +88,11 @@ span[data-portfolio-subtitle] {
         {% set colcount = loop %}
         {% if coltype == "<class 'dict'>" %}
           {# recurse, provide dict with types after dict #}
-          {{ portfoliotable_iter( types[(colcount.index0 + 1):], data[colname], False ) }}
+          {{ portfoliotable_iter( types[(colcount.index0 + 1):], data[colname], False, coltype ) }}
+          {% break %}
+        {% elif coltype == "<class 'fava_classy_portfolio.AccountsDict'>" %}
+          {# recurse, provide dict with types after dict #}
+          {{ portfoliotable_iter( types[(colcount.index0 + 1):], data[colname], False, coltype ) }}
           {% break %}
         {% else %}
           {# Just print the cell, generally don't expect this case #}
@@ -93,13 +108,20 @@ span[data-portfolio-subtitle] {
         {% if rowcount.index0 != 0 %}
           <tr>
         {% endif %}
-        {# print td cell key - TODO: deal with account keys for url links #}
-        {{ ptcell("key", key, "<class 'str'>", value[1]["rowspan"])}}
+        {# print td cell key #}
+        {% if dictType == "<class 'dict'>" %}
+          {{ ptcell("key", key, "<class 'str'>", value[1]["rowspan"])}}
+        {% elif dictType == "<class 'fava_classy_portfolio.AccountsDict'>" %}
+          {{ ptcell("key", key, "account_name", value[1]["rowspan"])}}          
+        {% endif %}
         {% set data_inner = value[0] %}
         {% for colname, coltype in types %}
           {% set colcount = loop %}
           {% if coltype == "<class 'dict'>" %}
-            {{ portfoliotable_iter( types[(colcount.index0 + 1):], data_inner[colname], False ) }}
+            {{ portfoliotable_iter( types[(colcount.index0 + 1):], data_inner[colname], False, coltype ) }}
+            {% break %}
+          {% elif coltype == "<class 'fava_classy_portfolio.AccountsDict'>" %}
+            {{ portfoliotable_iter( types[(colcount.index0 + 1):], data_inner[colname], False, coltype ) }}
             {% break %}
           {% else %}
             {{ ptcell(colname, data_inner[colname][0], coltype, data_inner[colname][1]["rowspan"]) }}
