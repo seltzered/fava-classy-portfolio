@@ -12,7 +12,7 @@ Classy Portfolio is an Extension for Fava, a web interface for the Beancount pla
 
 It's recommended (though not required) to use this extension along with the [beancount metadata spray plugin](https://github.com/seltzered/beancount-plugins-metadata-spray) to ease with tagging multiple accounts with portfolio metadata.
 
-An example file is available at https://github.com/seltzered/fava-class-portfolio-demo.
+An example file is available at https://github.com/seltzered/fava-classy-portfolio-demo.
 
 ## Usage
 
