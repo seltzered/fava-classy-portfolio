@@ -1,9 +1,10 @@
 """Classy Portfolio extension for Fava.
 
 """
-import os
 import re
 import datetime
+import traceback
+import sys
 
 from beancount.core.data import iter_entry_dates, Open, Commodity
 from beancount.core.number import ZERO, D, Decimal
@@ -51,35 +52,41 @@ class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
 
     def portfolio_accounts(self, begin=None, end=None):
         """An account tree based on matching regex patterns."""
-        self.load_report()
+        try:
+            self.load_report()
 
-        if begin:
-            tree = Tree(iter_entry_dates(self.ledger.entries, begin, end))
-        else:
-            tree = self.ledger.root_tree
-
-        portfolios = []
-
-        for option in self.config:
-            opt_key = option[0]
-            if opt_key == "account_name_pattern":
-                portfolio = self._account_name_pattern(tree, end, option[1])
-            elif opt_key == "account_open_metadata_pattern":
-                portfolio = self._account_metadata_pattern(
-                    tree, end, option[1][0], option[1][1]
-                )
+            if begin:
+                tree = Tree(iter_entry_dates(self.ledger.entries, begin, end))
             else:
-                raise FavaAPIException("Classy Portfolio: Invalid option.")
+                tree = self.ledger.root_tree
 
-            portfolio = (portfolio[0],  # title
-                         portfolio[1],  # subtitle
-                         (insert_rowspans(
-                             portfolio[2][0],
-                             portfolio[2][1],
-                             True),
-                          portfolio[2][1])  # portfolio data
-                         )
-            portfolios.append(portfolio)
+            portfolios = []
+
+            for option in self.config:
+                opt_key = option[0]
+                if opt_key == "account_name_pattern":
+                    portfolio = self._account_name_pattern(tree, end, option[1])
+                elif opt_key == "account_open_metadata_pattern":
+                    portfolio = self._account_metadata_pattern(
+                        tree, end, option[1][0], option[1][1]
+                    )
+                else:
+                    exception = FavaAPIException("Classy Portfolio: Invalid option.")
+                    raise(exception)
+
+                portfolio = (portfolio[0],  # title
+                             portfolio[1],  # subtitle
+                             (insert_rowspans(
+                                 portfolio[2][0],
+                                 portfolio[2][1],
+                                 True),
+                              portfolio[2][1])  # portfolio data
+                             )
+                portfolios.append(portfolio)
+
+        except Exception as exc:
+            traceback.print_exc(file=sys.stdout)
+
 
         return portfolios
 
