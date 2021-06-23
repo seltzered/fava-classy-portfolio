@@ -1,6 +1,11 @@
 <style>
+
+table[data-classy-portfolio] {
+}
+
 td[data-is-percentage] {
   font-weight: bold;
+  max-width: 75px;
 }
 
 td[data-is-gain=True] {
@@ -10,6 +15,39 @@ td[data-is-gain=True] {
 td[data-is-gain=False] {
   color: red;
 }
+
+th[data-is-percentage] {
+  max-width: 75px;
+  text-overflow: ellipsis;
+}
+
+th[data-string] {
+  max-width: 90px;
+  text-overflow: ellipsis;
+}
+
+td[data-string] {
+  max-width: 90px;
+  word-wrap: break-word;
+  display: table-cell;
+  overflow: hidden;
+  text-overflow: clip;
+}
+
+td[data-account-string] {
+  max-width: 159px;
+  word-wrap: break-word;
+  overflow-x: scroll;
+  display: block;
+}
+
+h3[data-portfolio-title] {
+  display: inline-block
+}
+
+span[data-portfolio-subtitle] {
+  color: grey
+}
 </style>
 
 {% set sort_type = {
@@ -17,6 +55,30 @@ td[data-is-gain=False] {
     "<class 'cdecimal.Decimal'>": 'num',
     "<class 'int'>": 'num',
 } %}
+
+{% macro ptheader(value, type_) %}
+{% set type = type_|string %}
+{% set name = value|replace("_","<br/>") %}
+{% autoescape false %}
+{% if type == "<class 'str'>" %}
+<th data-string data-sort="{{ sort_type[type|string] or "string" }}">
+  <{{ name }}
+</th>
+{% elif type == "<class 'fava_classy_portfolio.DecimalPercent'>" %}
+<th data-is-percentage data-sort="{{ sort_type[type|string] or "string" }}">
+  {{ name }}
+</th>
+{% elif type == "<class 'fava_classy_portfolio.DecimalPercentGainLoss'>" %}
+<th data-is-percentage data-sort="{{ sort_type[type|string] or "string" }}">
+  {{ name }}
+</th>
+{% else %}
+<th data-sort="{{ sort_type[type|string] or "string" }}">
+  {{ name }}
+</th>
+{% endif %}
+{% endautoescape %}
+{% endmacro %}
 
 {% macro ptcell(name, value, type_, rowspan=1) %}
 {% set type = type_|string %}
@@ -27,13 +89,11 @@ td[data-is-gain=False] {
   {% endfor %}
 </td>
 {% elif type == "<class 'str'>" %}
-<td rowspan="{{rowspan}}">
-  {%  if name == "account" %}
-  <a href="{{ url_for('account', name=value) }}">{{ value }}</a>
-  {% else %}
-  {{ value }}
-  {% endif %}
-</td>
+<td data-string rowspan="{{rowspan}}">{{ value }}</td>
+{% elif type == "account_name" %}
+{# NOTE: rowspan expected to be 1 for account names
+         for proper layout #}
+<td data-account-string rowspan="{{rowspan}}"><a href="{{ url_for('account', name=value, time=time_filter) }}">{{ value }}</a></td>
 {% elif type == "<class 'decimal.Decimal'>" or type == "<class 'cdecimal.Decimal'>" %}
 <td class="num" data-sort-value="{{ value or 0 }}" rowspan="{{rowspan}}">{{ value|format_currency }}</td>
 {% elif type == "<class 'beancount.core.amount.Amount'>" %}
@@ -67,21 +127,23 @@ td[data-is-gain=False] {
 {% endif %}
 {% endmacro %}
 
-{% macro portfoliotable_iter(types, data, isStart, filter_empty=None) %}
+{% macro portfoliotable_iter(types, data, isStart, dictType, filter_empty=None) %}
 
     {% if isStart == True %}
       <tr>
       {% for colname, coltype in types %}
         {% set colcount = loop %}
         {% if coltype == "<class 'dict'>" %}
-          {# {{colcount.index0|pprint}}
-          <br />
-          {{data[colname]|pprint}} #}
           {# recurse, provide dict with types after dict #}
-          {{ portfoliotable_iter( types[(colcount.index0 + 1):], data[colname], False ) }}
+          {{ portfoliotable_iter( types[(colcount.index0 + 1):], data[colname], False, coltype ) }}
+          {% break %}
+        {% elif coltype == "<class 'fava_classy_portfolio.AccountsDict'>" %}
+          {# recurse, provide dict with types after dict #}
+          {{ portfoliotable_iter( types[(colcount.index0 + 1):], data[colname], False, coltype ) }}
           {% break %}
         {% else %}
-          {{ ptcell(colname, data[colname][0], coltype, data[colname][1]["rowspan"])}}
+          {# Just print the cell, generally don't expect this case #}
+          {{ ptcell(colname, data[colname][0], coltype, data[colname][1]["rowspan"]) }}
         {% endif %}
       {% endfor %}
      </tr>
@@ -93,13 +155,20 @@ td[data-is-gain=False] {
         {% if rowcount.index0 != 0 %}
           <tr>
         {% endif %}
-        {# print td cell key - TODO: deal with account keys for url links #}
-        {{ ptcell("key", key, "<class 'str'>", value[1]["rowspan"])}}
+        {# print td cell key #}
+        {% if dictType == "<class 'dict'>" %}
+          {{ ptcell("key", key, "<class 'str'>", value[1]["rowspan"])}}
+        {% elif dictType == "<class 'fava_classy_portfolio.AccountsDict'>" %}
+          {{ ptcell("key", key, "account_name", value[1]["rowspan"])}}          
+        {% endif %}
         {% set data_inner = value[0] %}
         {% for colname, coltype in types %}
           {% set colcount = loop %}
           {% if coltype == "<class 'dict'>" %}
-            {{ portfoliotable_iter( types[(colcount.index0 + 1):], data_inner[colname], False ) }}
+            {{ portfoliotable_iter( types[(colcount.index0 + 1):], data_inner[colname], False, coltype ) }}
+            {% break %}
+          {% elif coltype == "<class 'fava_classy_portfolio.AccountsDict'>" %}
+            {{ portfoliotable_iter( types[(colcount.index0 + 1):], data_inner[colname], False, coltype ) }}
             {% break %}
           {% else %}
             {{ ptcell(colname, data_inner[colname][0], coltype, data_inner[colname][1]["rowspan"]) }}
@@ -129,13 +198,11 @@ td[data-is-gain=False] {
 #}
 {% macro portfoliotable(data, types, filter_empty=None) %}
 {% if types %}
-<table>
+<table data-classy-portfolio>
   <thead>
     <tr>
       {% for name, type in types %}
-      {% autoescape false %}
-      <th data-sort="{{ sort_type[type|string] or "string" }}">{{ name|replace("_","<br/>") }}</th>
-      {% endautoescape %}
+        {{ptheader(name, type)}}
       {% endfor %}
     </tr>
   </thead>
@@ -159,8 +226,9 @@ td[data-is-gain=False] {
 <h2>Classy Portfolio</h2>
 <br />
 {% for portfolio in extension.portfolio_accounts(None, None) %}
-    <h3>{{portfolio[0]}}</h3>
-    {{ portfoliotable(*portfolio[1]) }}
+    <h3 data-portfolio-title>{{portfolio[0]}}</h3>
+    <span data-portfolio-subtitle>{{portfolio[1]}}</span>
+    {{ portfoliotable(*portfolio[2]) }}
     <br />
 {% endfor %}
 

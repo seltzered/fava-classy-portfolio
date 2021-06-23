@@ -1,9 +1,10 @@
 """Classy Portfolio extension for Fava.
 
 """
-import os
 import re
 import datetime
+import traceback
+import sys
 
 from beancount.core.data import iter_entry_dates, Open, Commodity
 from beancount.core.number import ZERO, D, Decimal
@@ -18,6 +19,10 @@ from fava.core.tree import Tree
 from fava.core.helpers import FavaAPIException
 from fava.template_filters import get_market_value
 from fava.application import app
+
+
+class AccountsDict(dict):
+    pass
 
 
 class DecimalPercent(Decimal):
@@ -47,34 +52,41 @@ class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
 
     def portfolio_accounts(self, begin=None, end=None):
         """An account tree based on matching regex patterns."""
-        self.load_report()
+        try:
+            self.load_report()
 
-        if begin:
-            tree = Tree(iter_entry_dates(self.ledger.entries, begin, end))
-        else:
-            tree = self.ledger.root_tree
-
-        portfolios = []
-
-        for option in self.config:
-            opt_key = option[0]
-            if opt_key == "account_name_pattern":
-                portfolio = self._account_name_pattern(tree, end, option[1])
-            elif opt_key == "account_open_metadata_pattern":
-                portfolio = self._account_metadata_pattern(
-                    tree, end, option[1][0], option[1][1]
-                )
+            if begin:
+                tree = Tree(iter_entry_dates(self.ledger.entries, begin, end))
             else:
-                raise FavaAPIException("Classy Portfolio: Invalid option.")
+                tree = self.ledger.root_tree
 
-            portfolio = (portfolio[0],
-                         (insert_rowspans(
-                             portfolio[1][0],
-                             portfolio[1][1],
-                             True),
-                          portfolio[1][1])
-                         )
-            portfolios.append(portfolio)
+            portfolios = []
+
+            for option in self.config:
+                opt_key = option[0]
+                if opt_key == "account_name_pattern":
+                    portfolio = self._account_name_pattern(tree, end, option[1])
+                elif opt_key == "account_open_metadata_pattern":
+                    portfolio = self._account_metadata_pattern(
+                        tree, end, option[1][0], option[1][1]
+                    )
+                else:
+                    exception = FavaAPIException("Classy Portfolio: Invalid option.")
+                    raise(exception)
+
+                portfolio = (portfolio[0],  # title
+                             portfolio[1],  # subtitle
+                             (insert_rowspans(
+                                 portfolio[2][0],
+                                 portfolio[2][1],
+                                 True),
+                              portfolio[2][1])  # portfolio data
+                             )
+                portfolios.append(portfolio)
+
+        except Exception as exc:
+            traceback.print_exc(file=sys.stdout)
+
 
         return portfolios
 
@@ -89,7 +101,8 @@ class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
         Return:
             Data structured for use with a querytable (types, rows).
         """
-        title = "Account names matching: '" + pattern + "'"
+        title = pattern.capitalize()
+        subtitle = "Account names matching: '" + pattern + "'"
         selected_accounts = []
         regexer = re.compile(pattern)
         for acct in tree.keys():
@@ -100,7 +113,7 @@ class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
 
         selected_nodes = [tree[x] for x in selected_accounts]
         portfolio_data = self._portfolio_data(selected_nodes, date)
-        return title, portfolio_data
+        return (title, subtitle, portfolio_data)
 
     def _account_metadata_pattern(self, tree, date, metadata_key, pattern):
         """
@@ -114,7 +127,8 @@ class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
         Return:
             Data structured for use with a querytable - (types, rows).
         """
-        title = (
+        title = pattern.capitalize()
+        subtitle = (
             "Accounts with '"
             + metadata_key
             + "' metadata matching: '"
@@ -131,7 +145,7 @@ class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
 
         selected_nodes = [tree[x] for x in selected_accounts]
         portfolio_data = self._portfolio_data(selected_nodes, date)
-        return title, portfolio_data
+        return (title, subtitle, portfolio_data)
 
     def _asset_info(self, node):
         """
@@ -198,7 +212,7 @@ class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
             # ("portfolio_allocation", str(Decimal)),
             ("asset_class_allocation", str(DecimalPercent)),
             ("asset_subclass_total", str(Decimal)),
-            ("accounts", str(dict)),
+            ("accounts", str(AccountsDict)),
             # ("portfolio_allocation", str(Decimal)),
             # ("class_allocation", str(Decimal)),
             ("asset_subclass_allocation", str(DecimalPercent)),
@@ -212,6 +226,7 @@ class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
         portfolio_tree["portfolio_total"] = ZERO
         portfolio_tree["asset_classes"] = {}
         for node in nodes:
+            account_name = node.name
             commodity = node_commodity(node)
             if (commodity in self.commodity_dict) and (
                "asset-class" in self.commodity_dict[commodity].meta
@@ -288,7 +303,7 @@ class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
 
                 portfolio_tree["asset_classes"][asset_class][
                     "asset_subclasses"][asset_subclass][
-                    "accounts"][node.name] = account_data
+                    "accounts"][account_name] = account_data
 
                 # Accumulate sums
                 portfolio_tree[
@@ -307,9 +322,9 @@ class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
                 account_data["latest_price_date"] = None
                 portfolio_tree["asset_classes"][asset_class][
                     "asset_subclasses"][asset_subclass][
-                    "accounts"][node.name] = account_data
+                    "accounts"][account_name] = account_data
             else:
-                errors.append("account " + node.name +
+                errors.append("account " + account_name +
                               " has balances not in operating currency " +
                               self.operating_currency)
 
@@ -414,7 +429,8 @@ def insert_rowspans(data, coltypes, isStart):
             new_data[key] = (data[key], {"rowspan": 1})
 
         for coltype in coltypes:
-            if(coltype[1] == "<class 'dict'>"):
+            if((coltype[1] == "<class 'dict'>") or
+               (coltype[1] == "<class 'fava_classy_portfolio.AccountsDict'>")):
                 # Return length of each key.
                 for key in data.keys():
                     new_data_inner = insert_rowspans(data[key][coltype[0]],
