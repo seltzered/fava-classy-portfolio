@@ -85,7 +85,7 @@ span[data-portfolio-subtitle] {
 {% if type == "<class 'beancount.core.inventory.Inventory'>" %}
 <td class="num" rowspan="{{rowspan}}">
   {% for position in value|sort(attribute='units.currency') %}
-  {{ position.units|format_amount }}<br>
+  {{ position.units|format_currency }}<br>
   {% endfor %}
 </td>
 {% elif type == "<class 'str'>" %}
@@ -97,7 +97,7 @@ span[data-portfolio-subtitle] {
 {% elif type == "<class 'decimal.Decimal'>" or type == "<class 'cdecimal.Decimal'>" %}
 <td class="num" data-sort-value="{{ value or 0 }}" rowspan="{{rowspan}}">{{ value|format_currency }}</td>
 {% elif type == "<class 'beancount.core.amount.Amount'>" %}
-<td class="num" data-sort-value="{{ value.number or 0 }}" rowspan="{{rowspan}}">{{ value|format_amount }}</td>
+<td class="num" data-sort-value="{{ value.number or 0 }}" rowspan="{{rowspan}}">{{ value|format_currency }}</td>
 {% elif type == "<class 'fava_classy_portfolio.DecimalPercent'>" %}
   <td class="num" data-is-percentage data-sort-value="{{ value or 0 }}" rowspan="{{rowspan}}">
   {% if value %}
@@ -121,7 +121,7 @@ span[data-portfolio-subtitle] {
 {% elif type == "<class 'datetime.date'>" %}
 <td rowspan="{{rowspan}}">{{ value or '' }}</td>
 {% elif type == "<class 'beancount.core.position.Position'>" %}
-<td class="num" rowspan="{{rowspan}}">{{ value.units|format_amount }}</td>
+<td class="num" rowspan="{{rowspan}}">{{ value.units|format_currency }}</td>
 {% else %}
 <td class="query-error" title="Type {{ type|string }} not recognized" rowspan="{{rowspan}}">{{ value }}</td>
 {% endif %}
