@@ -52,6 +52,8 @@ class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
 
     def portfolio_accounts(self, begin=None, end=None):
         """An account tree based on matching regex patterns."""
+        portfolios = []
+
         try:
             self.load_report()
 
@@ -59,8 +61,6 @@ class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
                 tree = Tree(iter_entry_dates(self.ledger.entries, begin, end))
             else:
                 tree = self.ledger.root_tree
-
-            portfolios = []
 
             for option in self.config:
                 opt_key = option[0]
@@ -86,7 +86,6 @@ class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
 
         except Exception as exc:
             traceback.print_exc(file=sys.stdout)
-
 
         return portfolios
 
