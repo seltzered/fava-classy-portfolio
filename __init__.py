@@ -16,8 +16,8 @@ from flask import g
 from fava.ext import FavaExtensionBase
 from fava.template_filters import cost_or_value
 from fava.core.tree import Tree
-from fava.core.helpers import FavaAPIException
-from fava.template_filters import get_market_value
+from fava.helpers import FavaAPIException
+from fava.core.conversion import get_market_value
 from fava.application import app
 
 
