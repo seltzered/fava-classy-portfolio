@@ -46,9 +46,9 @@ class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
 
     def load_report(self):
         # self.account_open_dict = {entry.account: entry for entry in
-        # self.ledger.all_entries_by_type[Open]}
+        # self.ledger.all_entries_by_type.Open}
         self.commodity_dict = {entry.currency: entry for entry in
-                               self.ledger.all_entries_by_type[Commodity]}
+                               self.ledger.all_entries_by_type.Commodity}
 
     def portfolio_accounts(self, begin=None, end=None):
         """An account tree based on matching regex patterns."""
@@ -136,7 +136,7 @@ class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
         )
         selected_accounts = []
         regexer = re.compile(pattern)
-        for entry in self.ledger.all_entries_by_type[Open]:
+        for entry in self.ledger.all_entries_by_type.Open :
             if (metadata_key in entry.meta) and (
                 regexer.match(entry.meta[metadata_key]) is not None
             ):
