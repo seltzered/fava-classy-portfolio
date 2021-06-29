@@ -3,9 +3,7 @@
 ![Classy Portfolio Screenshot](./readme-screenshot.png)
 
 ## Warning: Prototype Code
-This is a prototype I'm throwing out there due to interest from the Beancount Community (see https://groups.google.com/forum/#!msg/beancount/XNjjnML_vsA/e_MAEhgCBgAJ ). It requires the latest dev revision of [fava](https://github.com/beancount/fava) (specifically newer than [2019-11-23](https://github.com/beancount/fava/commit/4d977c98ad07bff924da7c290b78ee9121e2bf38)).
-
-Issues / PR's welcome! So far this is just an early prototype to get a table breakdown view done, there's still work to be done on numeric features (e.g. gain/loss, tax, etc.).
+This is a prototype I'm throwing out there due to interest from the Beancount Community (see https://groups.google.com/forum/#!msg/beancount/XNjjnML_vsA/e_MAEhgCBgAJ ). Issues / PR's welcome! So far this is just an early prototype to get a table breakdown view done, there's still work to be done on numeric features (e.g. gain/loss, tax, etc.).
 
 ## Introduction
 Classy Portfolio is an Extension for Fava, a web interface for the Beancount plaintext accounting software. The extension displays a list of different portfolios (e.g. 'taxable' vs. 'retirement'), with breakdowns using 'asset-class' and 'asset-subclass' metadata labels on commodities.
@@ -13,6 +11,9 @@ Classy Portfolio is an Extension for Fava, a web interface for the Beancount pla
 It's recommended (though not required) to use this extension along with the [beancount metadata spray plugin](https://github.com/seltzered/beancount-plugins-metadata-spray) to ease with tagging multiple accounts with portfolio metadata.
 
 An example file is available at https://github.com/seltzered/fava-classy-portfolio-demo.
+
+## Compatibility with Fava 
+This currently works with [fava 1.19](https://github.com/beancount/fava). Since this extension depends on internal fava API's compatibility may change. 
 
 ## Usage
 
