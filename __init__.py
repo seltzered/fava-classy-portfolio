@@ -156,8 +156,8 @@ class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
             get_market_value,
             g.ledger.price_map,
             datetime.date.today())
-        account_balance_market_value = account_balance_market_value_node[
-            self.operating_currency]
+        account_balance_market_value = account_balance_market_value_node.get(
+            self.operating_currency, ZERO)
 
         # Calculate unrealized gain/loss
         # (follow beancount convention that negative values are income)
