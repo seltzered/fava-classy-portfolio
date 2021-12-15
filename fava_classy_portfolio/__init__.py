@@ -8,8 +8,7 @@ import sys
 
 from beancount.core.data import iter_entry_dates, Open, Commodity
 from beancount.core.number import ZERO, D, Decimal
-from beancount.core import prices
-from beancount.core import convert
+from beancount.core import prices, convert, amount
 
 from flask import g
 
@@ -139,13 +138,18 @@ class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
         portfolio_data = self._portfolio_data(selected_nodes, date)
         return (title, subtitle, portfolio_data)
 
-    def _asset_info(self, node):
+    def _asset_info(self, node, date):
         """
         Additional info on an asset (price, gain/loss)
         """
-        account_cost = (node.balance.reduce(convert.get_cost))[self.operating_currency]
+        account_cost_conv = self._convert_cost(node, date)
+        account_cost = account_cost_conv.number
+
         account_balance_market_value_node = node.balance.reduce(
-            get_market_value, g.ledger.price_map, datetime.date.today()
+            convert.convert_position,
+            self.operating_currency,
+            g.ledger.price_map,
+            datetime.date.today(),
         )
         account_balance_market_value = account_balance_market_value_node.get(
             self.operating_currency, ZERO
@@ -178,6 +182,15 @@ class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
             currency = quote_price[1][1]
             latest_price = prices.get_latest_price(g.ledger.price_map, (currency, base))
         return latest_price
+
+    def _convert_cost(self, node, date) -> amount.Amount:
+        account_cost_node = node.balance.reduce(convert.get_cost)
+        cur, num = list(account_cost_node.items())[0]
+        amt = amount.Amount(num, cur)
+        account_cost_amt = convert.convert_amount(
+            amt, self.operating_currency, g.ledger.price_map, date
+        )
+        return account_cost_amt
 
     def _portfolio_data(self, nodes, date):
         """
@@ -263,7 +276,8 @@ class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
             # Get balance market value at today's date, if possible.
 
             # Calculate cost
-            account_cost_node = node.balance.reduce(convert.get_cost)
+            account_cost_conv = self._convert_cost(node, date)
+            account_cost_node = {account_cost_conv.currency: account_cost_conv.number}
 
             if self.operating_currency in account_cost_node:
 
@@ -283,7 +297,7 @@ class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
                         account_balance_market_value,
                         account_income_gain_loss_unrealized,
                         account_gain_loss_unrealized_percentage,
-                    ) = self._asset_info(node)
+                    ) = self._asset_info(node, date)
 
                     account_data["balance_market_value"] = account_balance_market_value
                     account_data[
