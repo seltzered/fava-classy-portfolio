@@ -1,5 +1,5 @@
-"""Classy Portfolio extension for Fava.
-
+"""
+Classy Portfolio extension for Fava.
 """
 import re
 import datetime
@@ -39,16 +39,15 @@ class DecimalPercentGainLoss(Decimal):
 
 class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
     """Fava Extension Report that prints out a portfolio list based
-       on asset-class and asset-subclass metadata.
+    on asset-class and asset-subclass metadata.
     """
 
     report_title = "Classy Portfolio"
 
     def load_report(self):
-        # self.account_open_dict = {entry.account: entry for entry in
-        # self.ledger.all_entries_by_type.Open}
-        self.commodity_dict = {entry.currency: entry for entry in
-                               self.ledger.all_entries_by_type.Commodity}
+        self.commodity_dict = {
+            entry.currency: entry for entry in self.ledger.all_entries_by_type.Commodity
+        }
 
     def portfolio_accounts(self, begin=None, end=None):
         """An account tree based on matching regex patterns."""
@@ -72,16 +71,16 @@ class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
                     )
                 else:
                     exception = FavaAPIException("Classy Portfolio: Invalid option.")
-                    raise(exception)
+                    raise (exception)
 
-                portfolio = (portfolio[0],  # title
-                             portfolio[1],  # subtitle
-                             (insert_rowspans(
-                                 portfolio[2][0],
-                                 portfolio[2][1],
-                                 True),
-                              portfolio[2][1])  # portfolio data
-                             )
+                portfolio = (
+                    portfolio[0],  # title
+                    portfolio[1],  # subtitle
+                    (
+                        insert_rowspans(portfolio[2][0], portfolio[2][1], True),
+                        portfolio[2][1],
+                    ),  # portfolio data
+                )
                 portfolios.append(portfolio)
 
         except Exception as exc:
@@ -105,9 +104,7 @@ class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
         selected_accounts = []
         regexer = re.compile(pattern)
         for acct in tree.keys():
-            if (regexer.match(acct) is not None) and (
-                acct not in selected_accounts
-            ):
+            if (regexer.match(acct) is not None) and (acct not in selected_accounts):
                 selected_accounts.append(acct)
 
         selected_nodes = [tree[x] for x in selected_accounts]
@@ -128,15 +125,11 @@ class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
         """
         title = pattern.capitalize()
         subtitle = (
-            "Accounts with '"
-            + metadata_key
-            + "' metadata matching: '"
-            + pattern
-            + "'"
+            "Accounts with '" + metadata_key + "' metadata matching: '" + pattern + "'"
         )
         selected_accounts = []
         regexer = re.compile(pattern)
-        for entry in self.ledger.all_entries_by_type.Open :
+        for entry in self.ledger.all_entries_by_type.Open:
             if (metadata_key in entry.meta) and (
                 regexer.match(entry.meta[metadata_key]) is not None
             ):
@@ -150,41 +143,40 @@ class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
         """
         Additional info on an asset (price, gain/loss)
         """
-        account_cost = (node.balance.reduce(convert.get_cost))[
-            self.operating_currency]
+        account_cost = (node.balance.reduce(convert.get_cost))[self.operating_currency]
         account_balance_market_value_node = node.balance.reduce(
-            get_market_value,
-            g.ledger.price_map,
-            datetime.date.today())
+            get_market_value, g.ledger.price_map, datetime.date.today()
+        )
         account_balance_market_value = account_balance_market_value_node.get(
-            self.operating_currency, ZERO)
+            self.operating_currency, ZERO
+        )
 
         # Calculate unrealized gain/loss
         # (follow beancount convention that negative values are income)
-        account_income_gain_loss_unrealized = \
+        account_income_gain_loss_unrealized = (
             account_cost - account_balance_market_value
+        )
 
         # Calculate unrealized gain/loss (percentage)
         account_gain_loss_unrealized_percentage = (
-            (account_income_gain_loss_unrealized * D(-1.0)) /
-            account_cost) * D(100.0)
+            (account_income_gain_loss_unrealized * D(-1.0)) / account_cost
+        ) * D(100.0)
 
-        return account_balance_market_value, \
-            account_income_gain_loss_unrealized, \
-            account_gain_loss_unrealized_percentage
+        return (
+            account_balance_market_value,
+            account_income_gain_loss_unrealized,
+            account_gain_loss_unrealized_percentage,
+        )
 
     def _account_latest_price(self, node):
         # Get latest price date
         quote_price = list(node.balance.keys())[0]
-        if(quote_price[1] is None):
+        if quote_price[1] is None:
             latest_price = None
         else:
             base = quote_price[0]
             currency = quote_price[1][1]
-            latest_price = prices.get_latest_price(
-                g.ledger.price_map,
-                (currency, base)
-            )
+            latest_price = prices.get_latest_price(g.ledger.price_map, (currency, base))
         return latest_price
 
     def _portfolio_data(self, nodes, date):
@@ -208,17 +200,14 @@ class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
             ("portfolio_allocation", str(DecimalPercent)),
             ("asset_class_total", str(Decimal)),
             ("asset_subclasses", str(dict)),
-            # ("portfolio_allocation", str(Decimal)),
             ("asset_class_allocation", str(DecimalPercent)),
             ("asset_subclass_total", str(Decimal)),
             ("accounts", str(AccountsDict)),
-            # ("portfolio_allocation", str(Decimal)),
-            # ("class_allocation", str(Decimal)),
             ("asset_subclass_allocation", str(DecimalPercent)),
             ("balance_market_value", str(Decimal)),
             ("income_gain_loss", str(DecimalIncomeGainLoss)),
             ("gain_loss_percentage", str(DecimalPercentGainLoss)),
-            ("latest_price_date", str(datetime.date))
+            ("latest_price_date", str(datetime.date)),
         ]
 
         portfolio_tree = {}
@@ -228,45 +217,45 @@ class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
             account_name = node.name
             commodity = node_commodity(node)
             if (commodity in self.commodity_dict) and (
-               "asset-class" in self.commodity_dict[commodity].meta
-               ):
-                asset_class = self.commodity_dict[
-                    commodity].meta["asset-class"]
+                "asset-class" in self.commodity_dict[commodity].meta
+            ):
+                asset_class = self.commodity_dict[commodity].meta["asset-class"]
             else:
                 asset_class = "noclass"
 
             if (commodity in self.commodity_dict) and (
-               "asset-subclass" in self.commodity_dict[commodity].meta
-               ):
-                asset_subclass = self.commodity_dict[
-                    commodity].meta["asset-subclass"]
+                "asset-subclass" in self.commodity_dict[commodity].meta
+            ):
+                asset_subclass = self.commodity_dict[commodity].meta["asset-subclass"]
             else:
                 asset_subclass = "nosubclass"
 
             if asset_class not in portfolio_tree["asset_classes"]:
                 portfolio_tree["asset_classes"][asset_class] = {}
                 portfolio_tree["asset_classes"][asset_class][
-                    "portfolio_allocation"] = ZERO
-                portfolio_tree["asset_classes"][asset_class][
-                    "asset_class_total"] = ZERO
-                portfolio_tree["asset_classes"][asset_class][
-                    "asset_subclasses"] = {}
-            if asset_subclass not in portfolio_tree[
-                    "asset_classes"][asset_class]["asset_subclasses"]:
-                portfolio_tree["asset_classes"][asset_class][
-                    "asset_subclasses"][asset_subclass] = {}
-                portfolio_tree["asset_classes"][asset_class][
-                    "asset_subclasses"][asset_subclass][
-                    "asset_subclass_total"] = ZERO
-                portfolio_tree["asset_classes"][asset_class][
-                    "asset_subclasses"][asset_subclass][
-                    "portfolio_allocation"] = ZERO
-                portfolio_tree["asset_classes"][asset_class][
-                    "asset_subclasses"][asset_subclass][
-                    "asset_subclass_asset_class_allocation"] = ZERO
-                portfolio_tree["asset_classes"][asset_class][
-                    "asset_subclasses"][asset_subclass][
-                    "accounts"] = {}
+                    "portfolio_allocation"
+                ] = ZERO
+                portfolio_tree["asset_classes"][asset_class]["asset_class_total"] = ZERO
+                portfolio_tree["asset_classes"][asset_class]["asset_subclasses"] = {}
+            if (
+                asset_subclass
+                not in portfolio_tree["asset_classes"][asset_class]["asset_subclasses"]
+            ):
+                portfolio_tree["asset_classes"][asset_class]["asset_subclasses"][
+                    asset_subclass
+                ] = {}
+                portfolio_tree["asset_classes"][asset_class]["asset_subclasses"][
+                    asset_subclass
+                ]["asset_subclass_total"] = ZERO
+                portfolio_tree["asset_classes"][asset_class]["asset_subclasses"][
+                    asset_subclass
+                ]["portfolio_allocation"] = ZERO
+                portfolio_tree["asset_classes"][asset_class]["asset_subclasses"][
+                    asset_subclass
+                ]["asset_subclass_asset_class_allocation"] = ZERO
+                portfolio_tree["asset_classes"][asset_class]["asset_subclasses"][
+                    asset_subclass
+                ]["accounts"] = {}
 
             # Insert account-level balances and
             # Sum totals for later calculating allocation
@@ -274,13 +263,13 @@ class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
             # Get balance market value at today's date, if possible.
 
             # Calculate cost
-            account_cost_node = (node.balance.reduce(convert.get_cost))
+            account_cost_node = node.balance.reduce(convert.get_cost)
 
             if self.operating_currency in account_cost_node:
 
                 account_cost = account_cost_node[self.operating_currency]
                 latest_price = self._account_latest_price(node)
-                if (latest_price is None or latest_price[0] is None):
+                if latest_price is None or latest_price[0] is None:
                     latest_price_date = None
                     account_balance_market_value = account_cost
                     # assume there's no gain loss
@@ -290,28 +279,33 @@ class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
                     account_data["latest_price_date"] = None
                 else:
                     latest_price_date = latest_price[0]
-                    account_balance_market_value, \
-                        account_income_gain_loss_unrealized, \
-                        account_gain_loss_unrealized_percentage = \
-                        self._asset_info(node)
+                    (
+                        account_balance_market_value,
+                        account_income_gain_loss_unrealized,
+                        account_gain_loss_unrealized_percentage,
+                    ) = self._asset_info(node)
 
                     account_data["balance_market_value"] = account_balance_market_value
-                    account_data["income_gain_loss"] = account_income_gain_loss_unrealized
-                    account_data["gain_loss_percentage"] = account_gain_loss_unrealized_percentage
+                    account_data[
+                        "income_gain_loss"
+                    ] = account_income_gain_loss_unrealized
+                    account_data[
+                        "gain_loss_percentage"
+                    ] = account_gain_loss_unrealized_percentage
                     account_data["latest_price_date"] = latest_price_date
 
-                portfolio_tree["asset_classes"][asset_class][
-                    "asset_subclasses"][asset_subclass][
-                    "accounts"][account_name] = account_data
+                portfolio_tree["asset_classes"][asset_class]["asset_subclasses"][
+                    asset_subclass
+                ]["accounts"][account_name] = account_data
 
                 # Accumulate sums
-                portfolio_tree[
-                    "portfolio_total"] += account_balance_market_value
+                portfolio_tree["portfolio_total"] += account_balance_market_value
                 portfolio_tree["asset_classes"][asset_class][
-                    "asset_class_total"] += account_balance_market_value
-                portfolio_tree["asset_classes"][asset_class][
-                    "asset_subclasses"][asset_subclass][
-                    "asset_subclass_total"] += account_balance_market_value
+                    "asset_class_total"
+                ] += account_balance_market_value
+                portfolio_tree["asset_classes"][asset_class]["asset_subclasses"][
+                    asset_subclass
+                ]["asset_subclass_total"] += account_balance_market_value
 
             elif len(account_cost_node) == 0:
                 # Assume account is empty
@@ -319,54 +313,106 @@ class FavaClassyPortfolio(FavaExtensionBase):  # pragma: no cover
                 account_data["income_gain_loss"] = ZERO
                 account_data["gain_loss_percentage"] = ZERO
                 account_data["latest_price_date"] = None
-                portfolio_tree["asset_classes"][asset_class][
-                    "asset_subclasses"][asset_subclass][
-                    "accounts"][account_name] = account_data
+                portfolio_tree["asset_classes"][asset_class]["asset_subclasses"][
+                    asset_subclass
+                ]["accounts"][account_name] = account_data
             else:
-                errors.append("account " + account_name +
-                              " has balances not in operating currency " +
-                              self.operating_currency)
+                errors.append(
+                    "account "
+                    + account_name
+                    + " has balances not in operating currency "
+                    + self.operating_currency
+                )
 
         # Now that account balances and totals are calculated,
         # Traverse and calculate portfolio-level info.
         for asset_class in portfolio_tree["asset_classes"]:
             asset_class_dict = portfolio_tree["asset_classes"][asset_class]
 
-            asset_class_dict["portfolio_allocation"] = ZERO if portfolio_tree["portfolio_total"] == ZERO else round(
-                (asset_class_dict["asset_class_total"] /
-                 portfolio_tree["portfolio_total"]) * 100, 2
+            asset_class_dict["portfolio_allocation"] = (
+                ZERO
+                if portfolio_tree["portfolio_total"] == ZERO
+                else round(
+                    (
+                        asset_class_dict["asset_class_total"]
+                        / portfolio_tree["portfolio_total"]
+                    )
+                    * 100,
+                    2,
+                )
             )
 
             for asset_subclass in asset_class_dict["asset_subclasses"]:
-                asset_subclass_dict = asset_class_dict[
-                    "asset_subclasses"][asset_subclass]
+                asset_subclass_dict = asset_class_dict["asset_subclasses"][
+                    asset_subclass
+                ]
 
-                asset_subclass_dict["portfolio_allocation"] = ZERO if portfolio_tree["portfolio_total"] == ZERO else round(
-                    (asset_subclass_dict["asset_subclass_total"] /
-                        portfolio_tree["portfolio_total"]) * 100, 2
+                asset_subclass_dict["portfolio_allocation"] = (
+                    ZERO
+                    if portfolio_tree["portfolio_total"] == ZERO
+                    else round(
+                        (
+                            asset_subclass_dict["asset_subclass_total"]
+                            / portfolio_tree["portfolio_total"]
+                        )
+                        * 100,
+                        2,
+                    )
                 )
 
-                asset_subclass_dict["asset_class_allocation"] = ZERO if asset_class_dict["asset_class_total"] == ZERO else round(
-                    (asset_subclass_dict["asset_subclass_total"] /
-                        asset_class_dict["asset_class_total"]) * 100, 2
+                asset_subclass_dict["asset_class_allocation"] = (
+                    ZERO
+                    if asset_class_dict["asset_class_total"] == ZERO
+                    else round(
+                        (
+                            asset_subclass_dict["asset_subclass_total"]
+                            / asset_class_dict["asset_class_total"]
+                        )
+                        * 100,
+                        2,
+                    )
                 )
 
                 for account in asset_subclass_dict["accounts"]:
                     account_dict = asset_subclass_dict["accounts"][account]
 
-                    account_dict["portfolio_allocation"] = ZERO if portfolio_tree["portfolio_total"] == ZERO else round(
-                        (account_dict["balance_market_value"] /
-                            portfolio_tree["portfolio_total"]) * 100, 2
+                    account_dict["portfolio_allocation"] = (
+                        ZERO
+                        if portfolio_tree["portfolio_total"] == ZERO
+                        else round(
+                            (
+                                account_dict["balance_market_value"]
+                                / portfolio_tree["portfolio_total"]
+                            )
+                            * 100,
+                            2,
+                        )
                     )
 
-                    account_dict["asset_class_allocation"] = ZERO if asset_class_dict["asset_class_total"] == ZERO else round(
-                        (account_dict["balance_market_value"] /
-                            asset_class_dict["asset_class_total"]) * 100, 2
+                    account_dict["asset_class_allocation"] = (
+                        ZERO
+                        if asset_class_dict["asset_class_total"] == ZERO
+                        else round(
+                            (
+                                account_dict["balance_market_value"]
+                                / asset_class_dict["asset_class_total"]
+                            )
+                            * 100,
+                            2,
+                        )
                     )
 
-                    account_dict["asset_subclass_allocation"] = ZERO if asset_subclass_dict["asset_subclass_total"] == ZERO else round(
-                        (account_dict["balance_market_value"] /
-                            asset_subclass_dict["asset_subclass_total"]) * 100, 2
+                    account_dict["asset_subclass_allocation"] = (
+                        ZERO
+                        if asset_subclass_dict["asset_subclass_total"] == ZERO
+                        else round(
+                            (
+                                account_dict["balance_market_value"]
+                                / asset_subclass_dict["asset_subclass_total"]
+                            )
+                            * 100,
+                            2,
+                        )
                     )
 
         return portfolio_tree, types, errors
@@ -382,24 +428,24 @@ def node_commodity(node):
         ref_currency = currencies[0]
         for currency in currencies:
             if currency != ref_currency:
-                return 'mixed_commodities'
+                return "mixed_commodities"
         return ref_currency
     else:
-        return ''
+        return ""
 
 
 def insert_rowspans(data, coltypes, isStart):
     new_data = {}
     colcount = 0
 
-    if(isStart):
+    if isStart:
         # if starting, we start traversing the data by coltype
         for coltype in coltypes:
-            if(coltype[1] == "<class 'dict'>"):
+            if coltype[1] == "<class 'dict'>":
                 # Recurse and call rowspans again
-                new_data_inner = insert_rowspans(data[coltype[0]],
-                                                 coltypes[(colcount + 1):],
-                                                 False)
+                new_data_inner = insert_rowspans(
+                    data[coltype[0]], coltypes[(colcount + 1) :], False
+                )
 
                 # Collect the results
                 new_data[coltype[0]] = new_data_inner
@@ -410,7 +456,9 @@ def insert_rowspans(data, coltypes, isStart):
                 # append sum of columns to prior columns
                 for i in list(range(0, colcount, 1)):
                     new_data[coltypes[i][0]] = (
-                        new_data[coltypes[i][0]][0], {"rowspan": rowsum})
+                        new_data[coltypes[i][0]][0],
+                        {"rowspan": rowsum},
+                    )
                 break
 
             else:
@@ -428,13 +476,14 @@ def insert_rowspans(data, coltypes, isStart):
             new_data[key] = (data[key], {"rowspan": 1})
 
         for coltype in coltypes:
-            if((coltype[1] == "<class 'dict'>") or
-               (coltype[1] == "<class 'fava_classy_portfolio.AccountsDict'>")):
+            if (coltype[1] == "<class 'dict'>") or (
+                coltype[1] == "<class 'fava_classy_portfolio.AccountsDict'>"
+            ):
                 # Return length of each key.
                 for key in data.keys():
-                    new_data_inner = insert_rowspans(data[key][coltype[0]],
-                                                     coltypes[(colcount + 1):],
-                                                     False)
+                    new_data_inner = insert_rowspans(
+                        data[key][coltype[0]], coltypes[(colcount + 1) :], False
+                    )
                     new_data[key][0][coltype[0]] = new_data_inner
 
                     rowsum = 0
@@ -444,8 +493,8 @@ def insert_rowspans(data, coltypes, isStart):
                     # Backpropagate rowspans to earlier coltypes...
                     for i in list(range(0, colcount, 1)):
                         new_data[key][0][coltypes[i][0]] = (
-                            new_data[key][0][coltypes[i][0]][
-                                0], {"rowspan": rowsum}
+                            new_data[key][0][coltypes[i][0]][0],
+                            {"rowspan": rowsum},
                         )
                     # ...including the dictionary key
                     new_data[key] = (new_data[key][0], {"rowspan": rowsum})
@@ -455,7 +504,9 @@ def insert_rowspans(data, coltypes, isStart):
                 # placeholder for each key
                 for key in data.keys():
                     new_data[key][0][coltype[0]] = (
-                        data[key][coltype[0]], {"rowspan": 1})
+                        data[key][coltype[0]],
+                        {"rowspan": 1},
+                    )
 
             colcount = colcount + 1
 
